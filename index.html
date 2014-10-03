@@ -1,0 +1,218 @@
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<title>Symbolic Calculator</title>
+		<link rel="stylesheet" href="editor.css" />
+		<script type='text/javascript' src='jquery-1.10.2.min.js'></script>
+		<!--<script type='text/javascript' src='symcalc.js'></script>-->
+		<script>
+		
+			// If you want a local variable memory, move 'vars' inside processInput() function.
+			var vars = {
+				'x': 10
+			}
+		
+			var callbacks = [];
+		
+			symCalc = new Worker('symcalc.js');
+			
+			var sendTo = function(target, input, callback, passThrough) {
+			
+				if (typeof(input) === 'object') {
+					// Find the first available callback id.
+					var id = 0, i = 0;
+					while ((i < callbacks.length) && (typeof(callbacks[i]) !== 'undefined')) ++i;
+					
+					// Store the callback and target (so that there can be only one source).
+					callbacks[id] = {source: target, callback: callback, passThrough: passThrough};
+					
+					input['data'] = id;
+					target.postMessage(input);
+				}
+			}
+			
+			var onMessage = function(ev) {
+				
+				var response = ev.data;
+				//console.log('symCalc:', response);
+				var cid = response['data']
+				var cItem = callbacks[cid];
+				
+				if (cItem.source === cItem['source']) {
+					delete callbacks[cid];
+					cItem['callback'](response, cItem['passThrough']);
+				}
+			}
+			
+			var processInput = function() {
+				var codeArea = $('#input');
+				var input = codeArea.val()
+				if (input !== '') {
+					var t0, t1, t2, t3;
+					
+					var __valueCallback = function(response, passThrough) {
+						
+						var value = response['output'];
+						t3 = new Date();
+						
+						vars = response['vars'];
+						updateVars();
+						
+						$('.topmenu .statusitem').text("Compile: " + (t1 - t0) + "ms; Run: " + (t3 - t2) + "ms");
+						codeArea.focus();
+						console.log('done.');
+					}
+				
+					var __interpretCallback = function(response, passThrough) {
+						var interpreted = response.parseTree;
+						t1 = new Date();
+						//console.log('Interpreted: ', interpreted);
+						//$('#output1').append('<div class="result">' + codeArea.val() +  ': '/* + JSON.stringify(interpret(codeArea.val())) + '; '*/ + valueOf(interpreted, vars) + '</div>');
+						
+						t2 = new Date();
+						sendTo(symCalc, {type: 'value', program: interpreted, vars: vars}, __valueCallback);
+					}
+				
+					t0 = new Date();
+					sendTo(symCalc, {type: 'interpret', program: input}, __interpretCallback);
+				}
+				
+				updateVars();
+			}
+			
+			var updateVars = function() {
+				var inspector = $('.inspector').empty();
+				for (var item in vars) {
+					inspector.append('<span class="varitem"><label labelof="var_' + item + '">' + item + '</label><span class="varvalue" id="var_' + item + '"> ' + vars[item] + '</span></span>');
+				}
+			}
+			
+			var treeFromObject = function(root, level, obj) {
+				
+				switch(typeof(obj)) {
+					case 'undefined' : return 'undefined'; break;
+					case 'number' :
+					case 'string' : return '<input value="' + obj + '" />'; break;
+					case 'object' : {
+						root.append('<div id="item-' + level + '-root"></div>');
+						var objElement = root.find('div#item-' + level + '-root');
+						
+						if (Array.isArray(obj)) {
+							objElement.addClass('array');
+							for (var i = 0; i < obj.length; ++i) {
+								objElement.append('<div item="' + i + '"></div>');
+								objElement.find('div[item=' + item + ']').append(treeFromObject(objElement.find('div[item="' + i + '"]'), level + 1, obj[i]));
+							}
+						} else {
+							objElement.addClass('object');
+							for (var item in obj) {
+								objElement.append('<div item="' + item + '"></div>');
+								objElement.find('div[item=' + item + ']').append(treeFromObject(objElement.find('div[item="' + item + '"]'), level + 1, obj[item]));
+							}
+						}
+					}
+				}
+			}
+			
+			var onMouseUp = function(ev) {
+				var actionName = $(ev.target).attr('data-action');
+				if ( (typeof(actionName) === 'string') && (typeof(actions[actionName]) === 'function') ) actions[actionName]();
+			}
+			
+			var getCaret = function(el) { 
+				if (el.selectionStart) return el.selectionStart; 
+				
+				if (document.selection) { 
+					el.focus(); 
+
+					var r = document.selection.createRange(); 
+					if (r === null) return 0;
+
+					var re = el.createTextRange();
+					var rc = re.duplicate();
+					
+					re.moveToBookmark(r.getBookmark());
+					rc.setEndPoint('EndToStart', re);
+					
+					return rc.text.length;
+				}
+				return 0; 
+			}
+			
+			var setSelectionRange = function(el, selectionStart, selectionEnd) {
+				if (el.setSelectionRange) {
+					el.focus();
+					el.setSelectionRange(selectionStart, selectionEnd);
+				}
+				else if (el.createTextRange) {
+					var range = el.createTextRange();
+					range.collapse(true);
+					range.moveEnd('character', selectionEnd);
+					range.moveStart('character', selectionStart);
+					range.select();
+				}
+			}
+
+			var setCaretToPos = function(el, pos) {
+				setSelectionRange(el, pos, pos);
+			}
+			
+			var onReady = function() {
+				
+				$(document).on('mouseup', onMouseUp);
+				symCalc.addEventListener('message', onMessage, false);
+				
+				var textBox = $('#input');
+				
+				textBox
+					.on(
+						'keydown',
+						function (e) {
+							
+							// TODO missing: backwards tab with [shift] + [tab].
+							// TODO missing: selection tab with selection + [tab].
+							if (e.which === 9) e.preventDefault();
+						}
+					)
+					.on(
+						'keyup',
+						function(e) {
+							if (e.which === 9) {
+								var caretPos = getCaret(textBox[0]);
+								var s = textBox[0].value;
+								textBox.val(s.substr(0, caretPos) + "\t" + s.substr(caretPos));
+								setCaretToPos(textBox[0], ++caretPos);
+							}
+							//if (e.which == 13) actions['compile']();
+						}
+					);
+				
+				updateVars();
+			}
+			
+			var actions = {
+				compile: function() {
+					processInput();
+					
+				},
+				clearOutput: function() {
+					$('#output1').empty();
+				}
+			};
+			
+			$(document).ready(onReady);
+		</script>
+	</head>
+	<body>
+		<div class="topmenu">
+			<div class="menuitem" data-action="compile">Compile</div>
+			<div class="menuitem" data-action="clearOutput">Clear console</div>
+			<div class="statusitem"></div>
+		</div>
+		<div class="main">
+			<textarea id="input" class="codearea"></textarea>
+			<div class="output" id="output1"></div>
+		</div>
+		<div class="inspector"><div>
+	</body>
+</html>

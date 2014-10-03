@@ -1,0 +1,111 @@
+html, body {
+	margin: 0;
+	padding: 0;
+	width: 100%;
+	height: 100%;
+	overflow: hidden;
+}
+
+.codearea {
+	width: calc(100% - 8px);
+	padding: 0;
+	margin: 8px;
+	margin-right: 0;
+	resize: vertical;
+	height: 20%;
+	tab-size: 4;
+	-o-tab-size: 4;
+	-ms-tab-size: 4;
+	-moz-tab-size: 4;
+}
+
+.topmenu {
+	display: block;
+	height: 1.5em;
+	background-color: rgb(60, 60, 60);
+	color: white;
+	font-family: sans-serif;
+	font-weight: bold;
+	
+	-webkit-touch-callout: none;
+	-webkit-user-select: none;
+	-khtml-user-select: none;
+	-moz-user-select: none;
+	-ms-user-select: none;
+	user-select: none;
+}
+
+.menuitem {
+	display: inline-block;
+	padding-left: 8px;
+	padding-right: 8px;
+	margin-left: 2px;
+	margin-right: 2px;
+	line-height: 1.5em;
+	background-color: rgba(255, 255, 255, 0.0);
+	cursor: pointer;
+}
+
+.menuitem:hover {
+	background-color: rgba(255, 255, 255, 0.1);
+}
+
+.output {
+	height: calc(80% - 26px - 1.5em);
+	border: 1px solid silver;
+	margin: 8px;
+	margin-top: 0;
+	margin-right: 0;
+	overflow-y: auto;
+}
+
+.main {
+	width: 80%;
+	height: 100%;
+	display: inline-block;
+}
+
+.varitem {
+	width: 100%;
+	height: 24px;
+	display: block;
+}
+
+.varitem .varvalue{
+	width: calc(50% - 16px);
+	height: 24px;
+	display: inline-block;
+	line-height: 24px;
+}
+
+.inspector label {
+	width: 50%;
+	height: 100%;
+	font-weight: bold;
+	display: inline-block;
+	background-color: rgba(200, 200, 200, 0.5);
+	padding-left: 8px;
+	margin: 4px;
+	line-height: 24px;
+}
+
+.inspector {
+	margin: 8px;
+	margin-left: 0;
+	margin-bottom: 0;
+	width: calc(20% - 16px);
+	height: calc(100% - 18px - 1.5em);
+	border: 1px solid silver;
+	display: inline-block;
+	position:fixed;
+	right:0;
+	top: 1.5em;
+}
+
+.statusitem {
+	float:right;
+	color: white;
+	margin-left: 2px;
+	margin-right: 8px;
+	line-height: 1.5em;
+}
