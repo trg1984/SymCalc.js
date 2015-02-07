@@ -1,4 +1,4 @@
-SymCalc.js - a symbolic calculator for JavaScript
+SymCalc.js - a Symbolic Calculator for JavaScript
 =================================================
 
 Does not use eval(), does not rely on server side code
@@ -13,13 +13,13 @@ License
 -------
 MIT license. Have fun. Please send bug fixes back as pull requests so I can merge them to the project.
 
-About the reference programming language implementation
+About the Reference Programming Language Implementation
 -------------------------------------------------
 
 The reference programming language is made for a backend of a calculator. Therefore it does not have any of the fancy things one might expect from a programming language. Feel free to extend/modify the language for your personal needs.
 
 
-Cheat sheet for the reference programming language
+Cheat Sheet for the Reference Programming Language
 --------------------------------------------------
 * sum: Sum of elements given as a list.
 * sub: Substract a list of elements from left to right.
