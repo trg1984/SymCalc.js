@@ -66,3 +66,27 @@ Cheat Sheet for the Reference Programming Language
 	* Name of the element to be set.
 	* New value of the element to be set.
 * Basic arithmetic operators (`-`, `+`, `*` and `/`) work as one would expect.
+
+Localization
+------------
+
+As an experiment, a localized version of the command set has been added in finnish. If `Finnish, Finland` is selected from the drop down menu at the top, following new function names replace their english counterparts (if a function is not in this list, the name remains the same):
+
+* 'summa': 'sum',
+* 'erotus': 'sub',
+* 'tulo': 'mul',
+* 'jaa': 'div',
+* 'vastaluku': 'neg',
+* 'e': 'exp',
+* 'neliö': 'sqr',
+* 'neliöjuuri': 'sqrt',
+* 'itseisarvo': 'abs',
+* 'kirjoita': 'print',
+* 'lohko': 'block',
+* 'kun': 'while',
+* 'toista': 'for',
+* 'jos': 'if',
+* 'jokotai': 'ifelse',
+* 'aseta': 'set',
+* 'satunnainen': 'random',
+* 'pyöristä': 'round'
