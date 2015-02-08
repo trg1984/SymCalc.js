@@ -23,6 +23,7 @@
 					// Find the first available callback id.
 					var id = 0, i = 0;
 					while ((i < callbacks.length) && (typeof(callbacks[i]) !== 'undefined')) ++i;
+					id = i;
 					
 					// Store the callback and target (so that there can be only one source).
 					callbacks[id] = {source: target, callback: callback, passThrough: passThrough};
@@ -35,13 +36,18 @@
 			var onMessage = function(ev) {
 				
 				var response = ev.data;
-				//console.log('symCalc:', response);
-				var cid = response['data']
-				var cItem = callbacks[cid];
-				
-				if (cItem.source === cItem['source']) {
-					delete callbacks[cid];
-					cItem['callback'](response, cItem['passThrough']);
+				if (response.type === 'print') {
+					$('#output1').append('<div class="print">' + response.str + '</div>');
+				}
+				else {
+					//console.log('symCalc:', response);
+					var cid = response['data']
+					var cItem = callbacks[cid];
+					
+					if (cItem.source === cItem['source']) {
+						delete callbacks[cid];
+						cItem['callback'](response, cItem['passThrough']);
+					}
 				}
 			}
 			
@@ -140,6 +146,18 @@
 				return 0; 
 			}
 			
+			var changeLocale = function(ev) {
+				var newLocale = $('select#locale').val();
+				//console.log('Updating locale to ' + newLocale);
+				var __localeCallback = function(response) {
+					
+					// React to new locale.
+					//console.log('Updated locale to ' + response.locale);
+				}
+				
+				sendTo(symCalc, {type: 'setlocale', locale: newLocale}, __localeCallback);
+			}
+			
 			var setSelectionRange = function(el, selectionStart, selectionEnd) {
 				if (el.setSelectionRange) {
 					el.focus();
@@ -188,6 +206,10 @@
 						}
 					);
 				
+				var localeSelect = $('select#locale');
+				
+				localeSelect.on('change', function(e) { changeLocale(e) });
+				
 				updateVars();
 			}
 			
@@ -208,6 +230,12 @@
 		<div class="topmenu">
 			<div class="menuitem" data-action="compile">Compile</div>
 			<div class="menuitem" data-action="clearOutput">Clear console</div>
+			<select id="locale">
+				<option value="en-US">English, USA</option>
+				<option value="en-AU">English, Australia</option>
+				<option value="en-GB">English, Great Britain</option>
+				<option value="fi-FI">Finnish, Finland</option>
+			</select>
 			<div class="statusitem"></div>
 		</div>
 		<div class="main">

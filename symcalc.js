@@ -22,7 +22,7 @@ var quoteSeparator = '"';
 var delimiters_regExp = ['\\+', '\\-', '\\*', '\\/', '\\,'];
 var delimiters = ['+', '-', '*', '/', ','];
 var structuralFunctions = ['if', 'ifelse', 'block', 'while', 'for', 'set'];
-
+var locale = 'fi-FI';
 var root = null;
 var cellTypes = [
 	'var',
@@ -30,6 +30,33 @@ var cellTypes = [
 	'string',
 	'function'
 ];
+
+var translations = {
+	
+	'en-US': {},
+	'en-AU': {},
+	'en-GB': {},
+	'fi-FI': {
+		'summa': 'sum',
+		'erotus': 'sub',
+		'tulo': 'mul',
+		'jaa': 'div',
+		'vastaluku': 'neg',
+		'e': 'exp',
+		'neliö': 'sqr',
+		'neliöjuuri': 'sqrt',
+		'itseisarvo': 'abs',
+		'kirjoita': 'print',
+		'lohko': 'block',
+		'kun': 'while',
+		'toista': 'for',
+		'jos': 'if',
+		'jokotai': 'ifelse',
+		'aseta': 'set',
+		'satunnainen': 'random',
+		'pyöristä': 'round'
+	}
+};
 
 var fn = {
 	sum: function(arr) {
@@ -86,7 +113,15 @@ var fn = {
 			else console.log(arguments[0][0]);
 			return 0;
 		}
-		else return 1;
+		else {
+			self.postMessage(
+				{
+					type: 'print',
+					stream: 'stdout',
+					str: arguments[0][0]
+				}
+			);
+		}
 	},
 	block : function(args, vars) {
 		var lastLine = null;
@@ -131,15 +166,26 @@ var fn = {
 	set: function(args, vars) {
 		vars[args[0].name] = valueOf(args[1], vars);
 		return vars[args[0].name];
+	},
+	random: function(args, vars) {
+		return Math.random();
+	},
+	round: function() {
+		return Math.round(arguments[0]);
 	}
 };
 
 function isStructuralFunction(s) {
-	return structuralFunctions.indexOf(s) >= 0;
+	return structuralFunctions.indexOf(deLocalize(s)) >= 0;
+}
+
+function deLocalize(fnName) {
+	if (typeof(translations[locale][fnName]) === 'undefined') return fnName /* no translation exists in current locale. */;
+	else return translations[locale][fnName];
 }
 
 function isFunctionName(s) {
-	return typeof(fn[s]) === 'function';
+	return typeof(fn[deLocalize(s)]) === 'function';
 }
 
 function isVariableName(s) {
@@ -147,7 +193,7 @@ function isVariableName(s) {
 }
 
 function isBinaryOperator(s) {
-	return ['sum', 'sub', 'mul', 'div'].indexOf(s) >= 0;
+	return ['sum', 'sub', 'mul', 'div'].indexOf(deLocalize(s)) >= 0;
 }
 
 function parseString(s) {
@@ -163,7 +209,7 @@ function parseString(s) {
 
 function asBinaryOperator(s) {
 	var arr = ['+', '-', '*', '/'];
-	var index = ['sum', 'sub', 'mul', 'div'].indexOf(s);
+	var index = ['sum', 'sub', 'mul', 'div'].indexOf(deLocalize(s));
 	
 	if ((index >= 0) && (index < arr.length)) return arr[index];
 	/* else */ return null;
@@ -269,7 +315,6 @@ function interpret(input) {
 			
 			var delimDepth = 0;
 			var current = items[0].trim();
-			
 			if (current === '-') {
 				var arg = items.slice(1).join('');
 				return new Cell(
@@ -283,6 +328,22 @@ function interpret(input) {
 				);
 			}
 			else if (isFunctionName(current)) {
+				
+				if (items.length === 1) { // The element is a function without parameters or parenthesis.
+					return new Cell(
+						{
+							type: 'function',
+							name: current,
+							args: []
+							/*
+							args: [
+								interpret(arg)
+							]
+							*/
+						}
+					);
+				}
+				
 				//console.log(current, 'is a function name.')
 				i = 1;
 				do { // TODO This could be solved while going from right to left earlier.
@@ -348,6 +409,15 @@ function interpret(input) {
 					{
 						type: 'var',
 						name: current
+					}
+				);
+			}
+			else if (isFunctionName(current)) {
+				return new Cell(
+					{
+						type: 'function',
+						name: current,
+						args: []
 					}
 				);
 			}
@@ -443,13 +513,13 @@ function valueOf(input, vars) {
 	if (input.type === 'function') {
 		
 		if (isStructuralFunction(input.name)) {
-			return fn[input.name](input.args, vars);
+			return fn[deLocalize(input.name)](input.args, vars);
 		}
 		else {
 			var args = [];
 			for (var i = 0; i < input.args.length; ++i) args[i] = valueOf(input.args[i], vars);
 			
-			return fn[input.name](args);
+			return fn[deLocalize(input.name)](args);
 		}
 	}
 	else if (input.type === 'real') return input.value;
@@ -499,21 +569,34 @@ if (ENVIRONMENT_IS_WORKER) {
 					case 'interpret':
 						self.postMessage(
 							{
+								type: 'cb_interpret',
 								parseTree: interpret(input['program']),
 								data: input['data'] // Passthrough
 							}
 						);
-						break;
+					break;
 					case 'value':
 						self.postMessage(
 							{
+								type: 'cb_value',
 								output: typeof(input['program']) === 'string' ? valueOf(interpret(input['program']), input['vars']) : valueOf(input['program'], input['vars']),
 								vars: input['vars'],
 								data: input['data'] // Passthrough
 							}
 						);
-						break;
+					break;
+					case 'setlocale':
+						self['locale'] = input['locale'];
+						self.postMessage(
+							{
+								type: 'cb_setlocale',
+								locale: self['locale'],
+								data: input['data'] // Passthrough
+							}
+						);
+					break;
 					// No default case.
+					
 				}
 			}
 		},
