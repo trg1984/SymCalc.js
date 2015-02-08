@@ -182,6 +182,7 @@
 				symCalc.addEventListener('message', onMessage, false);
 				
 				var textBox = $('#input');
+				textBox.val('block(\n\tset(x, 10),\n\tset(y, random*10),\n\tprint(round(x+y))\n)');
 				
 				textBox
 					.on(
@@ -231,7 +232,7 @@
 			<div class="menuitem" data-action="compile">Compile</div>
 			<div class="menuitem" data-action="clearOutput">Clear console</div>
 			<select id="locale">
-				<option value="en-US">English, USA</option>
+				<option value="en-US" selected>English, USA</option>
 				<option value="en-AU">English, Australia</option>
 				<option value="en-GB">English, Great Britain</option>
 				<option value="fi-FI">Finnish, Finland</option>

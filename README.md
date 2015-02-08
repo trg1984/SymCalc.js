@@ -8,6 +8,7 @@ A while back I realized that there were a lot of symbolic calculators and parser
 
 The beauty of SymCalc.js is that the command set can be freely defined in JavaScript and executed in a WebWorker thread. If you don't want to allow while loops or sin function, you simply remove the function from the `fn` object and it is gone. There should not be direct access to the JavaScript side; if it exists, it is a bug or defined in your `fn` object. Even if such thing would exist, the code is run in a WebWorker, so it won't go very far. That said, this is experimental, made for a specific purpose and I will not take any responsibility of the code quality at this point.
 
+[Live demo](http://kulmakerroin.net/symcalc/)
 
 License
 -------
