@@ -65,7 +65,10 @@ Cheat Sheet for the Reference Programming Language
 * set: Sets value of a variable. Requires two elements:
 	* Name of the element to be set.
 	* New value of the element to be set.
+* round: Round the value of the given element.
+* random: Generates a random value between 0 and 1.
 * Basic arithmetic operators (`-`, `+`, `*` and `/`) work as one would expect.
+* If a function needs no parameters, the parenthesis can be left out. Function random() is one such case.
 
 Localization
 ------------
