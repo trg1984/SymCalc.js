@@ -19,8 +19,8 @@ var leftDelimiter = '(';
 var rightDelimiter = ')';
 var listSeparator = ',';
 var quoteSeparator = '"';
-var delimiters_regExp = ['\\+', '\\-', '\\*', '\\/', '\\,'];
-var delimiters = ['+', '-', '*', '/', ','];
+var delimiters_regExp = ['\\<\\=', '\\>\\=', '\\<\\>', '\\<', '\\>', '\\:\\=', '\\!\\=', '\\=', '\\+', '\\-', '\\*', '\\/', '\\,'];
+var delimiters = ['<=', '>=', '<>', '<', '>', ':=', '!=', '=', '+', '-', '*', '/', ','];
 var structuralFunctions = ['if', 'ifelse', 'block', 'while', 'for', 'set'];
 var locale = 'fi-FI';
 var root = null;
@@ -170,10 +170,66 @@ var fn = {
 	random: function(args, vars) {
 		return Math.random();
 	},
+	geq: function() {
+		return (arguments[0][0] >= arguments[0][1]) | 0;
+	},
+	leq: function() {
+		return (arguments[0][0] <= arguments[0][1]) | 0;
+	},
+	neq: function() {
+		return (arguments[0][0] != arguments[0][1]) | 0;
+	},
+	less: function() {
+		return (arguments[0][0] < arguments[0][1]) | 0;
+	},
+	greater: function() {
+		return (arguments[0][0] > arguments[0][1]) | 0;
+	},
+	equal: function() {
+		return (arguments[0][0] == arguments[0][1]) | 0;
+	},
 	round: function() {
 		return Math.round(arguments[0]);
 	}
 };
+
+var precedence = [
+	{
+		':=': 'set'
+	},
+	{
+		'>=': 'geq',
+		'<=': 'leq',
+		'<>': 'neq',
+		'!=': 'neq',
+		'<': 'less',
+		'>': 'greater',
+		'=': 'equal',
+	},
+	{
+		'+': 'sum',
+		'-': 'sub'
+	},
+	{
+		'*': 'mul',
+		'/': 'div'
+	},
+];
+
+var binaryOperators = [];
+var binOpFunctions = [];
+for (var level = 0; level < precedence.length; ++level)
+for (var item in precedence[level]) {
+	binaryOperators.push(item);
+	binOpFunctions.push(precedence[level][item]);
+}
+
+
+function isAnOperatorOnCurrentLevel(s, level) {
+	var operators = precedence[level];
+	for (var op in operators) if (s === op) return true;
+	/* else */ return false;
+}
 
 function isStructuralFunction(s) {
 	return structuralFunctions.indexOf(deLocalize(s)) >= 0;
@@ -208,10 +264,9 @@ function parseString(s) {
 }
 
 function asBinaryOperator(s) {
-	var arr = ['+', '-', '*', '/'];
-	var index = ['sum', 'sub', 'mul', 'div'].indexOf(deLocalize(s));
+	var index = binOpFunctions.indexOf(deLocalize(s));
 	
-	if ((index >= 0) && (index < arr.length)) return arr[index];
+	if ((index >= 0) && (index < binaryOperators.length)) return binaryOperators[index];
 	/* else */ return null;
 }
 
@@ -252,39 +307,11 @@ function interpret(input) {
 	var items = input.split(new RegExp('(' + listSeparator_regExp + '|' + leftDelimiter_regExp + '|' + delimiters_regExp.join('|') + '|' + rightDelimiter_regExp + ')', 'g')).filter(function(item) {return item !== ''});
 	//console.log('interpret(), input: ', input, items);
 	
-	// Search for additions and substractions.
-	var delimDepth = 0;
-	var i = items.length - 1;
-	do {
-		var current = items[i].trim(); // Remove surrounding whitespaces.
-		if (current === leftDelimiter) {
-			--delimDepth;
-			if (delimDepth < 0) throw('Unpaired delimiter found.');
-		}
-		else if (current === rightDelimiter) ++delimDepth;
-		else if (delimDepth === 0) {
-			
-			if ( (i > 0) && ((current === '+') || (current === '-')) ) {
-				var left = items.slice(0, i).join('');
-				var right = items.slice(i + 1).join('');
-				return new Cell(
-					{
-						type: 'function',
-						name: (current === '+') ? 'sum' : 'sub',
-						args: [
-							interpret(left),
-							interpret(right)
-						]
-					}
-				);
-			}
-		}
-		--i;
-	} while (i >= 0);
 	
-	if (i < 0) { // No additions or substractions were found, search for multiplications and divisions.
+	// Search for additions and substractions.
+	for (var level = 0; level < precedence.length; ++level) {
 		var delimDepth = 0;
-		i = items.length - 1;
+		var i = items.length - 1;
 		do {
 			var current = items[i].trim(); // Remove surrounding whitespaces.
 			if (current === leftDelimiter) {
@@ -293,13 +320,14 @@ function interpret(input) {
 			}
 			else if (current === rightDelimiter) ++delimDepth;
 			else if (delimDepth === 0) {
-				if ( (i > 0) && ((current === '*') || (current === '/')) ) {
+				
+				if ( (i > 0) && isAnOperatorOnCurrentLevel(current, level) ) {
 					var left = items.slice(0, i).join('');
 					var right = items.slice(i + 1).join('');
 					return new Cell(
 						{
 							type: 'function',
-							name: (current === '*') ? 'mul' : 'div',
+							name: precedence[level][current],
 							args: [
 								interpret(left),
 								interpret(right)
@@ -310,84 +338,31 @@ function interpret(input) {
 			}
 			--i;
 		} while (i >= 0);
+	}
+	if (i < 0) { // No multiplications or divisions were found.
 		
-		if (i < 0) { // No multiplications or divisions were found.
+		var delimDepth = 0;
+		var current = items[0].trim();
+		if (current === '-') {
+			var arg = items.slice(1).join('');
+			return new Cell(
+				{
+					type: 'function',
+					name: 'neg',
+					args: [
+						interpret(arg)
+					]
+				}
+			);
+		}
+		else if (isFunctionName(current)) {
 			
-			var delimDepth = 0;
-			var current = items[0].trim();
-			if (current === '-') {
-				var arg = items.slice(1).join('');
-				return new Cell(
-					{
-						type: 'function',
-						name: 'neg',
-						args: [
-							interpret(arg)
-						]
-					}
-				);
-			}
-			else if (isFunctionName(current)) {
-				
-				if (items.length === 1) { // The element is a function without parameters or parenthesis.
-					return new Cell(
-						{
-							type: 'function',
-							name: current,
-							args: []
-							/*
-							args: [
-								interpret(arg)
-							]
-							*/
-						}
-					);
-				}
-				
-				//console.log(current, 'is a function name.')
-				i = 1;
-				do { // TODO This could be solved while going from right to left earlier.
-					var trimmed = items[i].trim();
-					if (trimmed === leftDelimiter) {
-						++delimDepth;
-						if (delimDepth < 0) throw('Unpaired delimiter found.');
-					}
-					else if (trimmed === rightDelimiter) --delimDepth;
-					++i
-				} while (delimDepth > 0);
-				
-				
-				var level = 0;
-				var currentTemp = "";
-				var parameters = [];
-				for (var ind = 2; ind < i - 1; ++ind) {
-					//console.log(ind);
-					if (items[ind] === leftDelimiter) ++level;
-					else if (items[ind] === rightDelimiter) --level;
-					
-					if ((level === 0) && (items[ind] === listSeparator)) { // non-terminal parameter
-						//console.log('\tNew parameter1: ', currentTemp);
-						parameters.push(interpret(currentTemp));
-						currentTemp = "";
-					}
-					else {
-						currentTemp += items[ind];
-						if (ind === i - 2) { // terminal parameter
-							//console.log('\tNew parameter2: ', currentTemp);
-							parameters.push(interpret(currentTemp));
-						}
-					}
-				}
-				
-				//var arg = items.slice(2, i - 1).join('');
-				
-				//console.log('arg = ', arg, items);
-				
+			if (items.length === 1) { // The element is a function without parameters or parenthesis.
 				return new Cell(
 					{
 						type: 'function',
 						name: current,
-						args: parameters
+						args: []
 						/*
 						args: [
 							interpret(arg)
@@ -396,39 +371,91 @@ function interpret(input) {
 					}
 				);
 			}
-			else if (!isNaN(parseFloat(current))) {
-				return new Cell(
-					{
-						type: 'real',
-						value: parseFloat(current)
+			
+			//console.log(current, 'is a function name.')
+			i = 1;
+			do { // TODO This could be solved while going from right to left earlier.
+				var trimmed = items[i].trim();
+				if (trimmed === leftDelimiter) {
+					++delimDepth;
+					if (delimDepth < 0) throw('Unpaired delimiter found.');
+				}
+				else if (trimmed === rightDelimiter) --delimDepth;
+				++i
+			} while (delimDepth > 0);
+			
+			
+			var level = 0;
+			var currentTemp = "";
+			var parameters = [];
+			for (var ind = 2; ind < i - 1; ++ind) {
+				//console.log(ind);
+				if (items[ind] === leftDelimiter) ++level;
+				else if (items[ind] === rightDelimiter) --level;
+				
+				if ((level === 0) && (items[ind] === listSeparator)) { // non-terminal parameter
+					//console.log('\tNew parameter1: ', currentTemp);
+					parameters.push(interpret(currentTemp));
+					currentTemp = "";
+				}
+				else {
+					currentTemp += items[ind];
+					if (ind === i - 2) { // terminal parameter
+						//console.log('\tNew parameter2: ', currentTemp);
+						parameters.push(interpret(currentTemp));
 					}
-				);
+				}
 			}
-			else if (isVariableName(current)) {
-				return new Cell(
-					{
-						type: 'var',
-						name: current
-					}
-				);
-			}
-			else if (isFunctionName(current)) {
-				return new Cell(
-					{
-						type: 'function',
-						name: current,
-						args: []
-					}
-				);
-			}
-			else if ((current === leftDelimiter) && (items[items.length - 1].trim() === rightDelimiter)) {
-				return interpret(items.slice(1, items.length - 1).join(''));
-			}
-			else {
-				//console.log(items);
-				throw('Malformed input "' + input + '".')
-			};
+			
+			//var arg = items.slice(2, i - 1).join('');
+			
+			//console.log('arg = ', arg, items);
+			
+			return new Cell(
+				{
+					type: 'function',
+					name: current,
+					args: parameters
+					/*
+					args: [
+						interpret(arg)
+					]
+					*/
+				}
+			);
 		}
+		else if (!isNaN(parseFloat(current))) {
+			return new Cell(
+				{
+					type: 'real',
+					value: parseFloat(current)
+				}
+			);
+		}
+		else if (isVariableName(current)) {
+			return new Cell(
+				{
+					type: 'var',
+					name: current
+				}
+			);
+		}
+		else if (isFunctionName(current)) {
+			return new Cell(
+				{
+					type: 'function',
+					name: current,
+					args: []
+				}
+			);
+		}
+		else if ((current === leftDelimiter) && (items[items.length - 1].trim() === rightDelimiter)) {
+			return interpret(items.slice(1, items.length - 1).join(''));
+		}
+		else {
+			//console.log(items);
+			throw('Malformed input "' + input + '".')
+		};
 	}
 }
 
