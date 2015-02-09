@@ -47,6 +47,12 @@ Cheat Sheet for the Reference Programming Language
 * abs : Absolute value of the given element.
 * print : Prints the given element on the screen.
 * block : A Block of elements to be executed.
+* leq : Comparison between two elements; less or equal.
+* geq : Comparison between two elements; greater or equal.
+* less : Comparison between two elements; less than.
+* greater : Comparison between two elements; greater than.
+* neq : Comparison between two elements; not equal.
+* equal : Comparison between two elements; equality.
 * while: A while loop function. Requires two elements:
 	* First element is the while condition.
 	* The second one is the clause that is executed on each iteration.
@@ -67,7 +73,7 @@ Cheat Sheet for the Reference Programming Language
 	* New value of the element to be set.
 * round: Round the value of the given element.
 * random: Generates a random value between 0 and 1.
-* Basic arithmetic operators (`-`, `+`, `*` and `/`) work as one would expect.
+* Basic arithmetic operators (`-`, `+`, `*` and `/`), binary comparators (`<=`, `>=`, `<`, `=`, `>`, `!=`, `<>`) and setters (`:=`) work as one would expect.
 * If a function needs no parameters, the parenthesis can be left out. Function random() is one such case.
 
 Localization
