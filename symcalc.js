@@ -558,7 +558,7 @@ function valueOf(input, vars) {
 function hasValidParenthesis(s, leftParen, rightParen) {
 	
 	var leftP = typeof(leftParen) === 'string' ? leftParen : leftDelimiter;
-	var rightP = typeof(leftParen) === 'string' ? leftParen : rightDelimiter;
+	var rightP = typeof(rightParen) === 'string' ? rightParen : rightDelimiter;
 	var temp = s;
 	
 	var balance = 0;
